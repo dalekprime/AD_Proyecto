@@ -1,8 +1,6 @@
-from mpi4py import MPI
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import List
-from datetime import datetime
 import re
 
 class Tile(Enum):
@@ -88,7 +86,7 @@ class GroupType(Enum):
 #Honores
 WINDS = {'E', 'S', 'W', 'N'}
 DRAGONS = {'DR', 'DV', 'DB'}
-MAJOR_HONORS  = WINDS | DRAGONS  
+MAJOR_HONORS = WINDS | DRAGONS  
 MINOR_HONORS = {'C1', 'C9', 'P1', 'P9', 'B1', 'B9'}
 HONOR_SCORING = MAJOR_HONORS | MINOR_HONORS
 def is_major_honor(t: Tile) -> bool: return t.value in MAJOR_HONORS
@@ -122,7 +120,7 @@ class Group:
     isHonor: bool
 
 @dataclass
-class Game:
+class GameBase:
     ID: int
     ownWind: Wind
     roundWind: Wind
@@ -137,7 +135,7 @@ class Game:
     log: List[str] = field(default_factory=list)
     #Construccion de Juegos desde linea
     @classmethod
-    def parse(cls, line: str) -> "Game": 
+    def parse(cls, line: str) -> "GameBase": 
         inputPatron = r'^(\d+)\s+\[([ESWN])\s*/\s*([ESWN])\]\s+(.*?)\s+<(.*?)>\s+\*(.*?)\*$'
         match = re.match(inputPatron, line.strip())
         if not match:
@@ -194,30 +192,3 @@ class Game:
             isHonor = all(is_honor_scoring(t) for t in tilesList)
             newGame.groups.append(Group(tiles=tilesList, type=type, isVisible=isVisible, isHonor=isHonor))
         return newGame
-    
-    #Calcular Puntuacion
-    def detectStyle(self):
-        return Style.TRADICIONAL
-    def calcBase(self): 
-        self.baseScore = 0
-    def calcDoubles(self): 
-        self.doubles = 0
-
-    def calculateScore(self):
-        self.style = self.detectStyle()
-        if self.style in CLASSIC_BASE:
-            self.baseScore = CLASSIC_BASE[self.style]
-        else:
-            self.calcBase()
-        self.calcDoubles()
-        raw = self.baseScore * (2 ** self.doubles)
-        total = 5000 if (self.style == Style.TRADICIONAL and raw > 4500) else raw
-        total = min(total, 20000)
-        self.total = round(total / 100) * 100
-        self.log.append(f"Total mano: {raw} para {self.total}")
-    #Generar Salida
-    def createOutput(self) -> str: 
-        return f"{self.originalString} | {self.baseScore} | {self.doubles} | {self.total} | {self.style.value} | {self.log}"
-#Distribucion
-def main(): 
-    return
