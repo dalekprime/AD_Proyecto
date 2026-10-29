@@ -229,40 +229,44 @@ class scoreManager:
             score += 4
         hayChow = False
         dragones = set()
+        
         for g in self.groups:
             subscore = 0
             tp = g.type
             ab = g.isVisible
             hn = g.isHonor
+            
             if tp == GroupType.KUNG:
-                subscore = 4
+                subscore = 8
             elif tp == GroupType.PUNG:
                 subscore = 2
             elif tp == GroupType.EYE:
                 value = g.tiles[0].value
-                if value in ['DR', 'DV', 'DB']:
-                    dragones.add(value)
+                if value == 'DR': 
+                    subscore = 4
             elif tp == GroupType.MARAVILLAS:
                 continue
             else:
                 hayChow = True
-                continue
+                continue 
+                
+            # Multiplicadores por cerrado
             if ab == False:
                 subscore *= 2
+                
+            # Multiplicadores por honor
             if hn == True:
                 subscore *= 2
+                
             score += subscore
         
+        # Mahjong con chow o puro pung
         if hayChow:
             score += 20
         else:
             score += 30
         
-        if 'DR' in dragones:
-            score += 4
-
-        self.baseScore = score + 300
-        
+        self.baseScore = round(score / 10) * 10
     def calcDoubles(self): 
         doubles = 0
         rojas = 0
@@ -280,7 +284,6 @@ class scoreManager:
         if tiene_ramillete_negro:
             doubles += 4
             self.log.append("Ramillete Negro: +4 dobles")
-
         
         flor_propia_roja = ""
         flor_propia_negra = ""
@@ -297,7 +300,6 @@ class scoreManager:
             elif flor.value == flor_propia_negra and not tiene_ramillete_negro:
                 doubles += 1
                 self.log.append(f"Flor Propia ({flor.value}): +1 doble")
-
         
         pungs_dragones = 0
         ojos_dragon = 0
@@ -321,7 +323,6 @@ class scoreManager:
             elif g.type == GroupType.EYE:
                 if ficha in ['DR', 'DV', 'DB']:
                     ojos_dragon += 1
-
         
         if pungs_dragones == 3:
             doubles += 4
@@ -329,31 +330,32 @@ class scoreManager:
         elif pungs_dragones == 2 and ojos_dragon == 1:
             doubles += 3
             self.log.append("Escolares Menores: +3 dobles")
-
         
+        # --- LÓGICA DE PINTAS Y HONORES ---
         pintas = set()
         tiene_letras = False
         cant_chows = 0
         cant_pungs = 0
+        todas_las_fichas = []
         
         for g in self.groups:
-            ficha = g.tiles[0].value
-            if ficha in ['E', 'S', 'W', 'N', 'DR', 'DV', 'DB']:
-                tiene_letras = True
-            else:
-                pinta = ficha[0]
-                pintas.add(pinta)
+            for t in g.tiles:
+                todas_las_fichas.append(t.value)
+                if t.value in ['E', 'S', 'W', 'N', 'DR', 'DV', 'DB']:
+                    tiene_letras = True
+                else:
+                    pintas.add(t.value[0])
             
             if g.type == GroupType.CHOW:
                 cant_chows += 1
             elif g.type in (GroupType.PUNG, GroupType.KUNG):
                 cant_pungs += 1
 
-        
         if len(pintas) == 1:
             pinta_actual = list(pintas)[0]
             
             if not tiene_letras:
+                # Limpio puro (sin honores)
                 if cant_chows == 0:
                     doubles += 5
                     self.log.append("Limpio (Pungs de pinta): +5 dobles")
@@ -364,24 +366,26 @@ class scoreManager:
                     doubles += 3
                     self.log.append("Limpio (Pungs y Chows): +3 dobles")
             else:
+                # Tiene honores: Revisar si tiene el 1 y el 9 de la pinta
+                tiene_1 = f"{pinta_actual}1" in todas_las_fichas
+                tiene_9 = f"{pinta_actual}9" in todas_las_fichas
                 
-                tiene_pung_1 = any(g.type in (GroupType.PUNG, GroupType.KUNG) and g.tiles[0].value == f"{pinta_actual}1" for g in self.groups)
-                tiene_pung_9 = any(g.type in (GroupType.PUNG, GroupType.KUNG) and g.tiles[0].value == f"{pinta_actual}9" for g in self.groups)
-                
-                if tiene_pung_1 and tiene_pung_9:
+                if tiene_1 and tiene_9:
                     doubles += 3
                     self.log.append("Limpio (Honores con Ases y Nueves): +3 dobles")
                 else:
-                   
-                    if cant_chows == 0:
-                        doubles += 2
-                        self.log.append("Sucio (Pinta sin chow): +2 dobles")
-                    else:
-                        doubles += 1
-                        self.log.append("Sucio (Pinta con chow): +1 doble")
+                    doubles += 2
+                    self.log.append("Sucio (Honores con pinta): +2 dobles")
+        else:
+            # Fallback por si hay más de una pinta
+            if cant_chows == 0:
+                doubles += 2
+                self.log.append("Sucio (Pinta sin chow): +2 dobles")
+            else:
+                doubles += 1
+                self.log.append("Sucio (Pinta con chow): +1 doble")
 
-        self.doubles = doubles
-        
+        self.doubles = doubles   
 
 
 
@@ -424,7 +428,7 @@ class styleManager:
         if self._is_grandes_samurais(groups):
             return Style.GRANDES_SAMURAIS
 
-        if self._is_flor_del_cerezo(final_tile_val, own_wind_val, flower_vals):
+        if self._is_flor_del_cerezo(final_tile_val, own_wind_val, flower_vals, groups):
             return Style.LA_FLOR_DEL_CEREZO
 
         #Jugadas de 15.000 puntos
@@ -487,13 +491,17 @@ class styleManager:
         return True
 
     def _is_flor_del_cerezo(
-        self, final_tile_val: str, own_wind_val: str, flower_vals: List[str]
+        self, final_tile_val: str, own_wind_val: str, flower_vals: List[str], groups
     ) -> bool:
-        #LA FLOR DEL CEREZO: Mahjong con B5 al finaly flor propia.
+        #LA FLOR DEL CEREZO: Mahjong limpio de Ruedas (B) con B5 al final y flor propia.
         if final_tile_val != 'B5':
             return False
         own_flowers = OWN_FLOWER_MAP.get(own_wind_val, set())
-        return any(f in own_flowers for f in flower_vals)
+        if not any(f in own_flowers for f in flower_vals):
+            return False
+        # Verificar que TODA la mano esté compuesta exclusivamente por Ruedas (B)
+        all_tiles = [t.value for g in groups for t in g.tiles]
+        return all(t.startswith('B') for t in all_tiles)
 
     def _is_jaspe_rojo(self, melds, eyes) -> bool:
         #JASPE ROJO: Pungs y Ojos formados únicamente por palos rojos (P1, P5, P7, P9) y dragón rojo (DR).
