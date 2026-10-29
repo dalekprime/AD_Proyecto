@@ -1,6 +1,5 @@
 from mpi4py import MPI
 from datetime import datetime
-from dataclasses import dataclass, field
 from enum import Enum
 from typing import List, Set
 import re
@@ -137,27 +136,42 @@ CLASSIC_BASE = {
     Style.PESCANDO_LA_LUNA: 20000,
 }
 
-@dataclass
 class Group:
-    tiles: List[Tile]
-    type: GroupType 
-    isVisible: bool
-    isHonor: bool
+    def __init__(self, tiles: List[Tile], type: GroupType, isVisible: bool, isHonor: bool):
+        self.tiles = tiles
+        self.type = type
+        self.isVisible = isVisible
+        self.isHonor = isHonor
 
-@dataclass
 class GameBase:
-    ID: int
-    ownWind: Wind
-    roundWind: Wind
-    finalTile: Tile
-    originalString: str
-    baseScore: int = 0
-    doubles: int = 0
-    total: int = 0
-    style: Style = Style.TRADICIONAL
-    groups: List[Group] = field(default_factory=list)
-    flowers: List[Flower] = field(default_factory=list)
-    log: List[str] = field(default_factory=list)
+    def __init__(
+        self,
+        ID: int,
+        ownWind: Wind,
+        roundWind: Wind,
+        finalTile: Tile,
+        originalString: str,
+        baseScore: int = 0,
+        doubles: int = 0,
+        total: int = 0,
+        style: Style = Style.TRADICIONAL,
+        groups: List[Group] = None,
+        flowers: List[Flower] = None,
+        log: List[str] = None,
+    ):
+        self.ID = ID
+        self.ownWind = ownWind
+        self.roundWind = roundWind
+        self.finalTile = finalTile
+        self.originalString = originalString
+        self.baseScore = baseScore
+        self.doubles = doubles
+        self.total = total
+        self.style = style
+        self.groups = groups if groups is not None else []
+        self.flowers = flowers if flowers is not None else []
+        self.log = log if log is not None else []
+
     #Construccion de Juegos desde linea
     @classmethod
     def parse(cls, line: str) -> "GameBase": 
