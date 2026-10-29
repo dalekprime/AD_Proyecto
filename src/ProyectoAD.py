@@ -331,7 +331,6 @@ class scoreManager:
             doubles += 3
             self.log.append("Escolares Menores: +3 dobles")
         
-        # --- LÓGICA DE PINTAS Y HONORES ---
         pintas = set()
         tiene_letras = False
         cant_chows = 0
@@ -355,7 +354,7 @@ class scoreManager:
             pinta_actual = list(pintas)[0]
             
             if not tiene_letras:
-                # Limpio puro (sin honores)
+                # Limpio puro 
                 if cant_chows == 0:
                     doubles += 5
                     self.log.append("Limpio (Pungs de pinta): +5 dobles")
@@ -366,7 +365,6 @@ class scoreManager:
                     doubles += 3
                     self.log.append("Limpio (Pungs y Chows): +3 dobles")
             else:
-                # Tiene honores: Revisar si tiene el 1 y el 9 de la pinta
                 tiene_1 = f"{pinta_actual}1" in todas_las_fichas
                 tiene_9 = f"{pinta_actual}9" in todas_las_fichas
                 
@@ -377,7 +375,6 @@ class scoreManager:
                     doubles += 2
                     self.log.append("Sucio (Honores con pinta): +2 dobles")
         else:
-            # Fallback por si hay más de una pinta
             if cant_chows == 0:
                 doubles += 2
                 self.log.append("Sucio (Pinta sin chow): +2 dobles")
